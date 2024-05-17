@@ -10,7 +10,7 @@
 
 ## 📘 Introduction
 
-Welcome to the Minimalist Todo Django REST API repository, a backend solution designed for efficient task management. This project is built using Python and the Django REST Framework, catering to applications that require high-performance task handling capabilities.
+Welcome to the Minimalist Todo Django REST API repository, a backend solution designed for efficient task management. This project was built using Python and the Django REST Framework, catering to applications that require high-performance task handling capabilities.
 
 ## ✨ Key Features
 
