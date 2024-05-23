@@ -2,9 +2,9 @@
 URLs mapping for users.
 """
 from django.urls import path
-from .views import UserMeView
+from .views import UserMeRetrieveView
 
 app_name = 'user_api'
 urlpatterns = [
-    path('me/', UserMeView.as_view(), name='me')
+    path('me/', UserMeRetrieveView.as_view(), name='me')
 ]

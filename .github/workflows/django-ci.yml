@@ -1,33 +1,92 @@
 ---
-name: Django CI with Tests and Linting
+  name: Django CI with Tests and Linting
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-jobs:
+  on:
+    push:
+      branches: [ "main" ]
+    pull_request:
+      branches: [ "main" ]
+  
+  jobs:
     test-lint:
       name: Test and Lint
       runs-on: ubuntu-20.04
+  
+      services:
+        postgres:
+          image: postgres:latest
+          env:
+            POSTGRES_DB: test_db
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: password
+          ports:
+            - 5432:5432
+          options: >-
+            --health-cmd pg_isready
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5
+  
+      env:
+        DATABASE_URL: postgres://user:password@localhost:5432/test_db
+  
       steps:
         - uses: actions/checkout@v2
-
-        - name: Set up Python 3.9
+  
+        - name: Set up Python 3.12
           uses: actions/setup-python@v2
           with:
-            python-version: '3.9'
-
+            python-version: '3.12'
+  
         - name: Install dependencies
           run: |
             python -m pip install --upgrade pip
             pip install -r requirements.txt
-
-        - name: Run tests
+  
+        - name: Run unit tests
           run: |
-            python manage.py test
-
+            pytest -m unit
+  
         - name: Lint with Flake8
           run: |
             flake8 .
+  
+    integration-tests:
+      name: Integration Tests
+      runs-on: ubuntu-20.04
+  
+      services:
+        postgres:
+          image: postgres:latest
+          env:
+            POSTGRES_DB: test_db
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: password
+          ports:
+            - 5432:5432
+          options: >-
+            --health-cmd pg_isready
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5
+  
+      env:
+        DATABASE_URL: postgres://user:password@localhost:5432/test_db
+  
+      steps:
+        - uses: actions/checkout@v2
+  
+        - name: Set up Python 3.12
+          uses: actions/setup-python@v2
+          with:
+            python-version: '3.12'
+  
+        - name: Install dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+  
+        - name: Run integration tests
+          run: |
+            pytest -m e2e
+  

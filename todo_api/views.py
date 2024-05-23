@@ -3,7 +3,7 @@ Views for todo_api endpoints
 """
 
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, viewsets, status
+
 from .models import Task, TaskList
 from .serializers import (
     TaskSerializer,
@@ -13,10 +13,14 @@ from .serializers import (
     TaskCountSerializer,
 )
 
+from rest_framework.exceptions import NotFound
+from rest_framework import permissions, viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+
 from urllib.parse import unquote
-import uuid
+
+from uuid import UUID
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -31,44 +35,36 @@ class TaskViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = self.queryset.filter(created_by=self.request.user)
         task_list = self.request.query_params.get("list", "")
-        if task_list:
-            if task_list == "inbox":
-                queryset = queryset.filter(task_list__name="inbox")
-            elif task_list == "":
-                queryset = queryset
-            else:
-                task_list = unquote(task_list)  # Decode the URL-encoded string
-                task_list = str(task_list).lower().replace(" ", "-")
-                task_list = uuid.UUID(task_list)
-                queryset = queryset.filter(task_list__list_uuid=task_list)
+
+        # Guard clause for empty task_list
+        if not task_list:
+            return queryset.order_by("created_at").distinct()
+
+        # Define filter mappings for task_list values
+        filter_mapping = {
+            "inbox": {"task_list__isnull": True},
+            "upcoming": {"due_date__isnull": False},
+        }
+
+        # Apply predefined filters if available
+        if task_list in filter_mapping:
+            queryset = queryset.filter(**filter_mapping[task_list])
+        else:
+            try:
+                # Decode and normalize the task_list value
+                task_list = unquote(task_list).lower().replace(" ", "-")
+                # Validate the UUID
+                task_list_uuid = UUID(task_list)
+            except (ValueError, TypeError):
+                raise NotFound("Invalid UUID format for task list.")
+
+            # Verify the existence of the TaskList with the given UUID
+            get_object_or_404(TaskList, list_uuid=task_list_uuid)
+            queryset = queryset.filter(task_list__list_uuid=task_list_uuid)
+
         return queryset.order_by("created_at").distinct()
 
-    # override get method
     def list(self, request, *args, **kwargs):
-        """
-        Return the list of tasks for the authenticated user,
-        filtered by the task list specified in the query parameters.
-        If the list is not specified, return the list of tasks in the inbox.
-        In case inbox is not created, create it. If the list is not found,
-        it wil return a 404 error.
-        """
-        task_list = self.request.query_params.get("list", "")
-        if task_list != "inbox" and task_list != "":
-            try:
-                task_list = unquote(task_list)  # Decode the URL-encoded string
-                task_list = str(task_list).lower().replace(" ", "-")
-                list_uuid = uuid.UUID(task_list)
-                exists = get_object_or_404(TaskList, list_uuid=list_uuid)
-                if not exists:
-                    return Response(
-                        status=status.HTTP_404_NOT_FOUND,
-                        body={"message": "List was not found. We can not count tasks."},
-                    )
-            except ValueError:
-                return Response(
-                    status=status.HTTP_404_NOT_FOUND,
-                    data={"message": "Task list was not found. We cannot list tasks."},
-                )
         return super().list(request, *args, **kwargs)
 
     def get_serializer_class(self):
@@ -85,52 +81,14 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @action(methods=["GET"], detail=False, url_path="count")
     def count_tasks(self, queryset, *args, **kwargs):
-        """
-        Count completed tasks and retrieve count.
-        If a task list is specified in the query parameters, it will count
-        the tasks in that list.
-        If the list is not found, it will return a 404 error.
-        """
-        task_list = self.request.query_params.get("list", None)
-        if task_list == "upcoming":
-            # Count upcoming tasks
-            tasks = Task.objects.filter(due_date__isnull=False)
-            tasks_completed = tasks.filter(completed=True).count()
-            tasks_uncompleted = tasks.filter(completed=False).count()
-            data = {
-                "total": tasks.count(),
-                "completed": tasks_completed,
-                "uncompleted": tasks_uncompleted,
-            }
-        else:
-            # Count inbox tasks or listed tasks using UUID
-            if task_list and task_list != "inbox":
-                try:
-                    task_list = unquote(task_list)  # Decode the URL-encoded string
-                    task_list = str(task_list).lower().replace(" ", "-")
-                    list_uuid = uuid.UUID(task_list)
-                    exists = get_object_or_404(TaskList, list_uuid=list_uuid)
-                    if not exists:
-                        return Response(
-                            status=status.HTTP_404_NOT_FOUND,
-                            body={
-                                "message": "List was not found. We can not count tasks."
-                            },
-                        )
-                except ValueError:
-                    # If the conversion fails, handle the error gracefully
-                    return Response(
-                        status=status.HTTP_404_NOT_FOUND,
-                        data={"message": "List was not found. We cannot count tasks."},
-                    )
-            tasks = self.get_queryset().count()
-            tasks_completed = self.get_queryset().filter(completed=True).count()
-            tasks_uncompleted = self.get_queryset().filter(completed=False).count()
-            data = {
-                "total": tasks,
-                "completed": tasks_completed,
-                "uncompleted": tasks_uncompleted,
-            }
+        tasks = self.get_queryset().count()
+        completed_tasks = self.get_queryset().filter(completed=True).count()
+        pending_tasks = self.get_queryset().filter(completed=False).count()
+        data = {
+            "total": tasks,
+            "completed": completed_tasks,
+            "pending": pending_tasks,
+        }
 
         serializer = TaskCountSerializer(data, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -162,23 +120,20 @@ class TaskListViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
     def retrieve(self, request, list_uuid=None, *args, **kwargs):
-        """Using list_uuid to find task list and return a task_list object"""
+        """
+        Retrieve a task list object by list_uuid.
+        """
         list_uuid = list_uuid.lower()
         queryset = self.get_queryset()
+
         try:
-            if list_uuid == "inbox":
-                # case inbox os is not created
-                inbox = TaskList.objects.filter(
-                    name="inbox", created_by=self.request.user
-                ).exists()  # noqa: E501
-                if not inbox:
-                    TaskList.objects.create(name="inbox", created_by=self.request.user)
-                queryset = queryset.get(name__iexact="inbox")
-            else:
-                queryset = queryset.get(list_uuid__iexact=list_uuid)
+            # Attempt to retrieve the task list by UUID
+            task_list = queryset.get(list_uuid__iexact=list_uuid)
         except TaskList.DoesNotExist:
             return Response(
-                status=status.HTTP_404_NOT_FOUND, data={"message": "List Not found."}
+                {"message": "List not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        serializer = self.get_serializer(queryset, many=False)
+
+        # Serialize and return the task list
+        serializer = self.get_serializer(task_list)
         return Response(serializer.data)

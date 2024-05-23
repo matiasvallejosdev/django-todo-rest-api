@@ -43,7 +43,7 @@ class TaskCountSerializer(serializers.Serializer):
 
     total = serializers.IntegerField(default=0, read_only=True)
     completed = serializers.IntegerField(default=0, read_only=True)
-    uncompleted = serializers.IntegerField(default=0, read_only=True)
+    pending = serializers.IntegerField(default=0, read_only=True)
 
 
 class TaskDetailSerializer(ModelSerializer):

@@ -9,7 +9,7 @@ from core.serializers import UserSerializer
 User = get_user_model()
 
 
-class UserMeView(generics.RetrieveAPIView):
+class UserMeRetrieveView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
