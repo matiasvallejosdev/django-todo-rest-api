@@ -56,7 +56,7 @@ def test_retrieve_list_limited_to_user(api_client_with_credentials, user2):
 
 
 def test_retrieve_inbox_list_not_found(api_client_with_credentials, user):
-    list = baker.make(TaskList, created_by=user, name="inbox")
+    baker.make(TaskList, created_by=user, name="inbox")
     res = api_client_with_credentials.get(tasks_detail_url("inbox"))
     assert res.status_code == status.HTTP_404_NOT_FOUND
 

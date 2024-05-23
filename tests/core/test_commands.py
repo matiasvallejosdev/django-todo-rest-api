@@ -6,6 +6,7 @@ from django.db.utils import OperationalError
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.fixture
 def patched_check():
     with patch("core.management.commands.wait_for_db.Command.check") as check:
