@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "core",
     "todo_api",
     "user_api",
+    "ai_api",
     "auth_api",
     "django.contrib.sites",
     "dj_rest_auth",
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
 ]
 
 MIDDLEWARE = [
@@ -171,7 +173,7 @@ REST_AUTH = {
 SITE_ID = 1  # https://dj-rest-auth.readthedocs.io/en/latest/installation.html#registration-optional
 REST_USE_JWT = True  # use JSON Web
 
-# # Social authentication configuration
+# All auth social providers configuration
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": [
@@ -183,12 +185,30 @@ SOCIALACCOUNT_PROVIDERS = {
             "access_type": "online",
         },
         "VERIFIED_EMAIL": True,
-    }
+        "APP": {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+            "secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+        },
+    },
+    "github": {
+        "SCOPE": [
+            "user",
+            "repo",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+        },
+        "VERIFIED_EMAIL": True,
+        "APP": {
+            "client_id": os.environ.get("GITHUB_CLIENT_ID"),
+            "secret": os.environ.get("GITHUB_CLIENT_SECRET"),
+        },
+    },
 }
 
 # JWT Settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=480),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -196,14 +216,4 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "userId",  # for the custom user model
     "USER_ID_CLAIM": "user_id",
     "SIGNING_KEY": os.getenv("JWT_SECRET_KEY"),
-}
-
-# All auth social providers configuration
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "APP": {
-            "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
-            "secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
-        }
-    }
 }

@@ -1,4 +1,4 @@
-flake8
-pytest
-pytest-django
-model_bakery
+flake8==7.0.0
+pytest==8.2.1
+pytest-django==4.8.0
+model_bakery==1.0.0

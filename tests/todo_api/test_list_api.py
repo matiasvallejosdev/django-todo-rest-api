@@ -55,10 +55,20 @@ def test_retrieve_list_limited_to_user(api_client_with_credentials, user2):
     assert res.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_retrieve_inbox_list_not_found(api_client_with_credentials, user):
+def test_retrieve_list_inbox(api_client_with_credentials, user):
     baker.make(TaskList, created_by=user, name="inbox")
     res = api_client_with_credentials.get(tasks_detail_url("inbox"))
-    assert res.status_code == status.HTTP_404_NOT_FOUND
+    assert res.status_code == status.HTTP_200_OK
+    assert res.data["list_uuid"] == "inbox"
+    assert res.data["name"] == "inbox"
+
+
+def test_retrieve_list_upcoming(api_client_with_credentials, user):
+    baker.make(TaskList, created_by=user, name="upcoming")
+    res = api_client_with_credentials.get(tasks_detail_url("upcoming"))
+    assert res.status_code == status.HTTP_200_OK
+    assert res.data["list_uuid"] == "upcoming"
+    assert res.data["name"] == "upcoming"
 
 
 def test_create_list(api_client_with_credentials, user):

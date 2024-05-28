@@ -124,6 +124,13 @@ class TaskListViewSet(viewsets.ModelViewSet):
         Retrieve a task list object by list_uuid.
         """
         list_uuid = list_uuid.lower()
+        if list_uuid in ["inbox", "upcoming"]:
+            data = {
+                "list_uuid": list_uuid,
+                "name": list_uuid,
+            }
+            serializer = self.get_serializer(data)
+            return Response(serializer.data)
         queryset = self.get_queryset()
 
         try:
