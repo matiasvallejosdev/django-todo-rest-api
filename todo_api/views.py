@@ -38,7 +38,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         # Guard clause for empty task_list
         if not task_list:
-            return queryset.order_by("created_at").distinct()
+            return queryset.order_by("due_date").distinct()
 
         # Define filter mappings for task_list values
         filter_mapping = {
@@ -62,7 +62,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             get_object_or_404(TaskList, list_uuid=task_list_uuid)
             queryset = queryset.filter(task_list__list_uuid=task_list_uuid)
 
-        return queryset.order_by("created_at").distinct()
+        return queryset.order_by("due_date").distinct()
 
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -114,6 +114,12 @@ class TaskListViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = self.queryset.filter(created_by=self.request.user)
+        queryparams = self.request.query_params
+        archived = queryparams.get("archived", None)
+        if archived is not None:
+            queryset = queryset.filter(archived=True)
+        else:
+            queryset = queryset.filter(archived=False)
         return queryset.order_by("created_at").distinct()
 
     def perform_create(self, serializer):

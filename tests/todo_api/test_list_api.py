@@ -35,12 +35,35 @@ def test_list_task_lists_limited_to_user(api_client_with_credentials, user2):
     assert len(res.data) == 0
 
 
+def test_list_task_lists_not_archived(api_client_with_credentials, user):
+    baker.make(TaskList, created_by=user, _quantity=5)
+    baker.make(TaskList, created_by=user, archived=True, _quantity=5)
+    res = api_client_with_credentials.get(LISTS_URL)
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 5
+
+
+def test_list_task_lists_archived(api_client_with_credentials, user):
+    baker.make(TaskList, created_by=user, _quantity=5)
+    baker.make(TaskList, created_by=user, archived=True, _quantity=5)
+    params = {"archived": "true"}
+    res = api_client_with_credentials.get(LISTS_URL, params)
+    assert res.status_code == status.HTTP_200_OK
+    assert len(res.data) == 5
+
+
 def test_retrieve_list(api_client_with_credentials, user):
     list = baker.make(TaskList, created_by=user)
     res = api_client_with_credentials.get(tasks_detail_url(list.list_uuid))
     assert res.status_code == status.HTTP_200_OK
     assert res.data["list_uuid"] == str(list.list_uuid)
     assert res.data["name"] == list.name
+
+
+def test_retrieve_list_archived(api_client_with_credentials, user):
+    list = baker.make(TaskList, created_by=user, archived=True)
+    res = api_client_with_credentials.get(tasks_detail_url(list.list_uuid))
+    assert res.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_retrieve_list_not_found(api_client_with_credentials, user):
@@ -125,3 +148,16 @@ def test_delete_list_limited_to_user(api_client_with_credentials, user2):
     res = api_client_with_credentials.delete(tasks_detail_url(list.list_uuid))
     assert res.status_code == status.HTTP_404_NOT_FOUND
     assert TaskList.objects.count() == 1
+
+
+def test_archive_list(api_client_with_credentials, user):
+    list = baker.make(TaskList, created_by=user)
+    payload = {"archived": True}
+    res = api_client_with_credentials.patch(
+        tasks_detail_url(list.list_uuid),
+        payload,
+    )
+    assert res.status_code == status.HTTP_200_OK
+
+    res = api_client_with_credentials.get(tasks_detail_url(list.list_uuid))
+    assert res.status_code == status.HTTP_404_NOT_FOUND

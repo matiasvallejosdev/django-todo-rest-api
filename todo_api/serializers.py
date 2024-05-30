@@ -15,6 +15,7 @@ class TaskListSerializer(ModelSerializer):
             "list_uuid",
             "name",
             "created_by",
+            "archived",
         )
         read_only_fields = ("id", "list_uuid")
 
