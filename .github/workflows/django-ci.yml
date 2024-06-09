@@ -29,6 +29,7 @@
   
       env:
         DATABASE_URL: postgres://user:password@localhost:5432/test_db
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
   
       steps:
         - uses: actions/checkout@v2
@@ -73,6 +74,7 @@
   
       env:
         DATABASE_URL: postgres://user:password@localhost:5432/test_db
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
   
       steps:
         - uses: actions/checkout@v2
