@@ -24,6 +24,7 @@ class AutocompleteTaskView(RetrieveAPIView):
         title = request.query_params.get("title", "")
         list_tasks = request.query_params.get("list_tasks", "")
         list_tasks = list_tasks.split(",") if list_tasks else []
+        print(list_tasks, input_text, title)
 
         if not input_text or not title:
             return Response(
@@ -46,6 +47,7 @@ class AutocompleteTaskView(RetrieveAPIView):
                 ],
             )
         except Exception as e:
+            print(e)
             return Response(
                 {"error": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -56,10 +58,12 @@ class AutocompleteTaskView(RetrieveAPIView):
             print(completion)
             if "status" not in completion:
                 return Response(
-                    {"error": "There is an error building completion"}, status=status.HTTP_400_BAD_REQUEST
+                    {"error": "There is an error building completion"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             completion_json = json.loads(completion)
         except (KeyError, json.JSONDecodeError) as e:
+            print(e)
             return Response(
                 {"error": "Invalid response from chat completion"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -67,7 +71,8 @@ class AutocompleteTaskView(RetrieveAPIView):
 
         if completion_json.get("status") == "error":
             return Response(
-                {"error": completion_json["message"]}, status=status.HTTP_400_BAD_REQUEST
+                {"error": completion_json["message"]},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         text = completion_json.get("text", "")

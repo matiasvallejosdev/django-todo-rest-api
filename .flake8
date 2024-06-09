@@ -8,3 +8,4 @@ exclude =
 
 ignore =
     E501
+    W291

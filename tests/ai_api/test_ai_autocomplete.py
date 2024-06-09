@@ -1,5 +1,4 @@
 import pytest
-import re
 from rest_framework import status
 from django.urls import reverse
 
